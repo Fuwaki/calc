@@ -1,5 +1,7 @@
+use num::FromPrimitive;
 use std::fmt;
 use std::fmt::Display;
+use std::ops::{Add, Div, Mul, Sub};
 #[derive(Debug)]
 enum Element {
     Number,
@@ -14,17 +16,42 @@ enum Method {
     Div,
     Direct,
 }
-struct TreeNode {
-    value: i128,
-    method: Method,
-    left: Option<Box<TreeNode>>,
-    right: Option<Box<TreeNode>>,
+//定义Arithmetic是拥有xxx特征的特征
+trait Arithmetic:
+    Add<Output = Self>
+    + Sub<Output = Self>
+    + Mul<Output = Self>
+    + Div<Output = Self>
+    + Copy
+    + Display
+    + std::str::FromStr
+    + FromPrimitive
+{
 }
-impl TreeNode {
+//定义所有实现了这些特征的类型都是Arithmetic
+impl<T> Arithmetic for T where
+    T: Add<Output = T>
+        + Sub<Output = T>
+        + Mul<Output = T>
+        + Div<Output = T>
+        + Copy
+        + Display
+        + std::str::FromStr
+        + FromPrimitive
+{
+}
+
+struct TreeNode<T: Arithmetic> {
+    value: T,
+    method: Method,
+    left: Option<Box<TreeNode<T>>>,
+    right: Option<Box<TreeNode<T>>>,
+}
+impl<T: Arithmetic> TreeNode<T> {
     //我好像使用的是先序遍历来实现从左到右计算
-    fn solve(self, i: i128, m: Method) -> i128 {
-        fn calc(a: i128, b: i128, m: Method) -> i128 {
-            println!("计算:{} {:?} {}", a, m, b);
+    fn solve(self, i: T, m: Method) -> T {
+        fn calc<T: Arithmetic>(a: T, b: T, m: Method) -> T {
+            // println!("计算:{} {:?} {}", a, m, b);
             match m {
                 Method::Add => a + b,
                 Method::Div => a / b,
@@ -37,22 +64,25 @@ impl TreeNode {
         if self.method == Method::Direct {
             return calc(i, self.value, m);
         } else {
-            let l = self.left.unwrap().solve(0, Method::Add);
+            let l = self
+                .left
+                .unwrap()
+                .solve(T::from_i128(0).unwrap(), Method::Add);
             let res = calc(i, l, m); //res是左和上级左的和
             let r = self.right.unwrap().solve(res, self.method);
             return r;
         }
     }
-    fn zero()->Self{
+    fn zero() -> Self {
         TreeNode {
-            value: 0,
+            value: T::from_i128(0).unwrap(),
             method: Method::Direct,
             left: None,
             right: None,
         }
     }
 }
-impl Display for TreeNode {
+impl<T: Arithmetic> Display for TreeNode<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "({} {:?})", self.value, self.method)
     }
@@ -60,7 +90,7 @@ impl Display for TreeNode {
 /*
 通过level表明父级优先级，如果父级级别比当前低，那么需要让自己优先计算，方法就是把自己放到左节点中
 */
-fn parse(s: &str, e: Element, level: u8) -> (usize, TreeNode) {
+fn parse<T: Arithmetic>(s: &str, e: Element, level: u8) -> (usize, TreeNode<T>) {
     //println!("尝试解析{} 作为 {:?}", s, e);
     match e {
         Element::Number => {
@@ -74,7 +104,7 @@ fn parse(s: &str, e: Element, level: u8) -> (usize, TreeNode) {
                         neg = true;
                         continue;
                     }
-                    if temp.parse::<u128>().is_ok() {
+                    if temp.parse::<f64>().is_ok() {
                         i += 1;
                         continue;
                     } else {
@@ -87,10 +117,13 @@ fn parse(s: &str, e: Element, level: u8) -> (usize, TreeNode) {
             return (
                 i - 1,
                 TreeNode {
-                    value: if neg { -1 } else { 1 }
-                        * (&s[if neg { 1 } else { 0 }..i - 1])
-                            .parse::<i128>()
-                            .unwrap(),
+                    value: if neg {
+                        T::from_i128(-1).unwrap()
+                    } else {
+                        T::from_i128(1).unwrap()
+                    } * (&s[if neg { 1 } else { 0 }..i - 1])
+                        .parse::<T>()
+                        .unwrap_or(T::from_i128(0).unwrap()),
                     method: Method::Direct,
                     left: None,
                     right: None,
@@ -101,7 +134,7 @@ fn parse(s: &str, e: Element, level: u8) -> (usize, TreeNode) {
             //要么是数字/括号-符号-表达式 要么是数字
 
             let len: usize;
-            let l_number: TreeNode;
+            let l_number: TreeNode<T>;
             //看看是不是括号
             if s.as_bytes()[0] == b'(' {
                 (len, l_number) = parse(s, Element::Bracket, 0);
@@ -139,7 +172,7 @@ fn parse(s: &str, e: Element, level: u8) -> (usize, TreeNode) {
                     return (
                         0,
                         TreeNode {
-                            value: 0,
+                            value: T::from_i128(0).unwrap(),
                             method: m,
                             left: Some(Box::new(l_number)),
                             right: Some(Box::new(r_exp)),
@@ -152,7 +185,7 @@ fn parse(s: &str, e: Element, level: u8) -> (usize, TreeNode) {
                         return (
                             0,
                             TreeNode {
-                                value: 0,
+                                value: T::from_i128(0).unwrap(),
                                 method: m,
                                 left: Some(Box::new(l_number)),
                                 right: Some(Box::new(r_exp)),
@@ -162,10 +195,10 @@ fn parse(s: &str, e: Element, level: u8) -> (usize, TreeNode) {
                         return (
                             0,
                             TreeNode {
-                                value: 0,
+                                value: T::from_i128(0).unwrap(),
                                 method: Method::Add,
                                 left: Some(Box::new(TreeNode {
-                                    value: 0,
+                                    value: T::from_i128(0).unwrap(),
                                     method: m,
                                     left: Some(Box::new(l_number)),
                                     right: Some(Box::new(r_exp)),
@@ -194,7 +227,7 @@ fn parse(s: &str, e: Element, level: u8) -> (usize, TreeNode) {
             return (
                 matched_bracket + 1,
                 TreeNode {
-                    value: 0,
+                    value: T::from_i128(0).unwrap(),
                     method: Method::Add,
                     left: Some(Box::new(inside)),
                     right: Some(Box::new(TreeNode::zero())),
@@ -203,23 +236,25 @@ fn parse(s: &str, e: Element, level: u8) -> (usize, TreeNode) {
         }
     }
 }
-fn calc(s:&str)->i128{
-    let (_,res)=parse(s, Element::Expression, 0);
-    return res.solve(0,Method::Add);
+fn calc_i128(s: &str) -> i128 {
+    let (_, res) = parse(s, Element::Expression, 0);
+    return res.solve(0, Method::Add);
 }
-fn test(){
-    assert_eq!(calc("1+1"),2);
-    assert_eq!(calc("1-1"),0);
-    assert_eq!(calc("1*1"),1);
-    assert_eq!(calc("1/1"),1);
-    assert_eq!(calc("1-(1-2)"),2);
-    assert_eq!(calc("1*(1-3)*(8+3)"),-22);
-    assert_eq!(calc("4/3"),1);
-    assert_eq!(calc("(3+4)*3/(4+2)"),3);
-
-
-
+fn calc_f64(s: &str) -> f64 {
+    let (_, res) = parse(s, Element::Expression, 0);
+    return res.solve(0.0, Method::Add);
 }
+fn test() {
+    assert_eq!(calc_i128("1+1"), 2);
+    assert_eq!(calc_i128("1-1"), 0);
+    assert_eq!(calc_i128("1*1"), 1);
+    assert_eq!(calc_i128("1/1"), 1);
+    assert_eq!(calc_i128("1-(1-2)"), 2);
+    assert_eq!(calc_i128("1*(1-3)*(8+3)"), -22);
+    assert_eq!(calc_i128("4/3"), 1);
+    assert_eq!(calc_i128("(3+4)*3/(4+2)"), 3);
+}
+
 fn main() {
     // let mut s=String::from("0");
     // for i in 1..25000{
@@ -227,7 +262,7 @@ fn main() {
     // }
     test();
 
-    let a = "(-2)*(3)";
-    let r=calc(a);
+    let a = "(-1)/3";
+    let r = calc_f64(a);
     println!("结果:{}", r);
 }
