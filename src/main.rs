@@ -52,6 +52,7 @@ impl<T: Arithmetic> TreeNode<T> {
     //我好像使用的是先序遍历来实现从左到右计算
     fn solve(self, i: T, m: Method) -> T {
         fn calc<T: Arithmetic>(a: T, b: T, m: Method) -> T {
+            #[cfg(debug_assertions)]
             println!("计算:{} {:?} {}", a, m, b);
             match m {
                 Method::Add => a + b,
@@ -92,6 +93,7 @@ impl<T: Arithmetic> Display for TreeNode<T> {
 通过level表明父级优先级，如果父级级别比当前低，那么需要让自己优先计算，方法就是把自己放到左节点中
 */
 fn parse<T: Arithmetic>(s: &str, e: Element, level: u8) -> (usize, TreeNode<T>) {
+    #[cfg(debug_assertions)]
     println!("尝试解析{} 作为 {:?}", s, e);
     match e {
         Element::Number => {
@@ -237,6 +239,8 @@ fn parse<T: Arithmetic>(s: &str, e: Element, level: u8) -> (usize, TreeNode<T>) 
         }
     }
 }
+//如果仅使用整数计算 那么就替换成这个函数
+#[warn(dead_code)]
 fn calc_i128(s: &str) -> i128 {
     let (_, res) = parse(s, Element::Expression, 0);
     return res.solve(0, Method::Add);
@@ -270,6 +274,6 @@ fn main()->! {
             continue;
         }
         let result=calc_f64(exp);          //对每行遍历
-        println!("--> {}",result);
+        println!("--> {}\n",result);
     }
 }
