@@ -1,6 +1,5 @@
 use std::fmt;
 use std::fmt::Display;
-use std::path::StripPrefixError;
 #[derive(Debug)]
 enum Element {
     Number,
@@ -42,6 +41,14 @@ impl TreeNode {
             let res = calc(i, l, m); //res是左和上级左的和
             let r = self.right.unwrap().solve(res, self.method);
             return r;
+        }
+    }
+    fn zero()->Self{
+        TreeNode {
+            value: 0,
+            method: Method::Direct,
+            left: None,
+            right: None,
         }
     }
 }
@@ -163,12 +170,7 @@ fn parse(s: &str, e: Element, level: u8) -> (usize, TreeNode) {
                                     left: Some(Box::new(l_number)),
                                     right: Some(Box::new(r_exp)),
                                 })),
-                                right: Some(Box::new(TreeNode {
-                                    value: 0,
-                                    method: Method::Direct,
-                                    left: None,
-                                    right: None,
-                                })),
+                                right: Some(Box::new(TreeNode::zero())),
                             },
                         );
                     } else {
@@ -195,25 +197,37 @@ fn parse(s: &str, e: Element, level: u8) -> (usize, TreeNode) {
                     value: 0,
                     method: Method::Add,
                     left: Some(Box::new(inside)),
-                    right: Some(Box::new(TreeNode {
-                        value: 0,
-                        method: Method::Direct,
-                        left: None,
-                        right: None,
-                    })),
+                    right: Some(Box::new(TreeNode::zero())),
                 },
             );
         }
     }
 }
+fn calc(s:&str)->i128{
+    let (_,res)=parse(s, Element::Expression, 0);
+    return res.solve(0,Method::Add);
+}
+fn test(){
+    assert_eq!(calc("1+1"),2);
+    assert_eq!(calc("1-1"),0);
+    assert_eq!(calc("1*1"),1);
+    assert_eq!(calc("1/1"),1);
+    assert_eq!(calc("1-(1-2)"),2);
+    assert_eq!(calc("1*(1-3)*(8+3)"),-22);
+    assert_eq!(calc("4/3"),1);
+    assert_eq!(calc("(3+4)*3/(4+2)"),3);
 
+
+
+}
 fn main() {
     // let mut s=String::from("0");
     // for i in 1..25000{
     //     s+=&format!("+{}",i);
     // }
-    let a = "(1+2)*2";
-    let (len, res) = parse(a, Element::Expression, 0);
-    // println!("{} : {}", res, len);
-    println!("结果:{}", res.solve(0, Method::Add))
+    test();
+
+    let a = "(-2)*(3)";
+    let r=calc(a);
+    println!("结果:{}", r);
 }
