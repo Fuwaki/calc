@@ -1,6 +1,7 @@
 use num::FromPrimitive;
 use std::fmt;
 use std::fmt::Display;
+use std::io::Write;
 use std::ops::{Add, Div, Mul, Sub};
 #[derive(Debug)]
 enum Element {
@@ -51,7 +52,7 @@ impl<T: Arithmetic> TreeNode<T> {
     //我好像使用的是先序遍历来实现从左到右计算
     fn solve(self, i: T, m: Method) -> T {
         fn calc<T: Arithmetic>(a: T, b: T, m: Method) -> T {
-            // println!("计算:{} {:?} {}", a, m, b);
+            println!("计算:{} {:?} {}", a, m, b);
             match m {
                 Method::Add => a + b,
                 Method::Div => a / b,
@@ -91,7 +92,7 @@ impl<T: Arithmetic> Display for TreeNode<T> {
 通过level表明父级优先级，如果父级级别比当前低，那么需要让自己优先计算，方法就是把自己放到左节点中
 */
 fn parse<T: Arithmetic>(s: &str, e: Element, level: u8) -> (usize, TreeNode<T>) {
-    //println!("尝试解析{} 作为 {:?}", s, e);
+    println!("尝试解析{} 作为 {:?}", s, e);
     match e {
         Element::Number => {
             let mut i = 1;
@@ -244,7 +245,7 @@ fn calc_f64(s: &str) -> f64 {
     let (_, res) = parse(s, Element::Expression, 0);
     return res.solve(0.0, Method::Add);
 }
-fn test() {
+fn _test() {
     assert_eq!(calc_i128("1+1"), 2);
     assert_eq!(calc_i128("1-1"), 0);
     assert_eq!(calc_i128("1*1"), 1);
@@ -255,14 +256,20 @@ fn test() {
     assert_eq!(calc_i128("(3+4)*3/(4+2)"), 3);
 }
 
-fn main() {
-    // let mut s=String::from("0");
-    // for i in 1..25000{
-    //     s+=&format!("+{}",i);
-    // }
-    test();
+fn main()->! {
 
-    let a = "(-1)/3";
-    let r = calc_f64(a);
-    println!("结果:{}", r);
+    //_test();
+
+    loop{
+        let mut line=String::new();
+        print!("> ");
+        std::io::stdout().flush().unwrap();
+        std::io::stdin().read_line(&mut line).unwrap();
+        let exp=line.lines().next().unwrap();
+        if exp.is_empty(){
+            continue;
+        }
+        let result=calc_f64(exp);          //对每行遍历
+        println!("--> {}",result);
+    }
 }
